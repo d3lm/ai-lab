@@ -1,0 +1,156 @@
+{
+  "schema": "hillclimb/v2",
+  "flow": "mutation-test-review",
+  "metrics": [
+    {
+      "id": "score",
+      "label": "score",
+      "kind": "float",
+      "scale": 1
+    },
+    {
+      "id": "recall",
+      "label": "recall",
+      "kind": "float",
+      "scale": 1
+    },
+    {
+      "id": "verified",
+      "label": "verified",
+      "kind": "float",
+      "scale": 1
+    },
+    {
+      "id": "actionable",
+      "label": "found+fix",
+      "kind": "float",
+      "scale": 1
+    },
+    {
+      "id": "verdict_ok",
+      "label": "verdict ok",
+      "kind": "float",
+      "scale": 1
+    },
+    {
+      "id": "top_fix_ok",
+      "label": "top fix ok",
+      "kind": "float",
+      "scale": 1
+    },
+    {
+      "id": "false_claims",
+      "label": "false claims",
+      "kind": "float",
+      "scale": 3,
+      "better": "lower"
+    },
+    {
+      "id": "tree_clean",
+      "label": "tree clean",
+      "kind": "float",
+      "scale": 1
+    }
+  ],
+  "perf_fields": [
+    {
+      "id": "cost_usd",
+      "label": "cost",
+      "unit": "$"
+    },
+    {
+      "id": "judge_cost_usd",
+      "label": "judge cost",
+      "unit": "$"
+    },
+    {
+      "id": "latency_s",
+      "label": "latency",
+      "unit": "s"
+    },
+    {
+      "id": "tool_calls",
+      "label": "tool calls"
+    },
+    {
+      "id": "num_turns",
+      "label": "turns"
+    }
+  ],
+  "train_ids": [
+    "rust-acl-tests",
+    "rust-backoff-cap",
+    "rust-control-semver",
+    "rust-hard-e2e-suite",
+    "rust-hard-frame-codec",
+    "rust-hard-golden-whitespace",
+    "rust-token-bucket",
+    "rust-varint",
+    "ts-csv-fixtures",
+    "ts-emitter",
+    "ts-hard-mocked-unit",
+    "ts-hard-sandbox-drop",
+    "ts-hard-vacuous-asserts",
+    "ts-order-totals",
+    "ts-range-clamp",
+    "ts-retry"
+  ],
+  "test_ids": [
+    "rust-adler-deleted-tests",
+    "rust-config-parser",
+    "rust-hard-refactor-move",
+    "rust-hard-tested-double",
+    "rust-hard-weak-property",
+    "rust-lru-cache",
+    "ts-control-duration",
+    "ts-hard-refactor-wrap",
+    "ts-hard-snapshot-bug",
+    "ts-hard-ttl-polling",
+    "ts-paginate",
+    "ts-username-validator"
+  ],
+  "harness_sha": "97737613a20093dbad4e8c112d996c063848dcd75e5f1b8a8b77983cbc15ba4e",
+  "current_round": 2,
+  "reps": 2,
+  "goal": {
+    "target": "score",
+    "direction": "higher",
+    "hold": [
+      "false_claims",
+      "tree_clean"
+    ],
+    "note": "cost is not a guardrail (user: ignore cost); budget cap $400 total"
+  },
+  "approve_each_round": false,
+  "scope": {
+    "will_change": [
+      "skills/mutation-test-review/SKILL.md",
+      "skills/mutation-test-review/references/*",
+      "skills/mutation-test-review/scripts/*"
+    ],
+    "off_limits": [
+      "evals/mutation-test-review/** (cases, judge, runner)",
+      "SKILL.md frontmatter name / disable-model-invocation / argument-hint"
+    ]
+  },
+  "harness_paths": [
+    "evals/mutation-test-review/run_eval.py",
+    "evals/mutation-test-review/judge.py",
+    "evals/mutation-test-review/fixture.py",
+    "evals/mutation-test-review/cases/"
+  ],
+  "stopping": "plateau: test score change < noise floor for 3 consecutive rounds, a guardrail regresses outside noise, or spend nears $400",
+  "best": {
+    "round": 2,
+    "variant": "v2",
+    "test_score": 1.0
+  },
+  "summary": {
+    "best_variant": "v2",
+    "headline_metric": "score"
+  },
+  "changes": {
+    "v1": "Probe every static finding; isolate scratch state between concurrent reviews",
+    "v2": "Verify suggested tests with a per-test kill matrix"
+  }
+}

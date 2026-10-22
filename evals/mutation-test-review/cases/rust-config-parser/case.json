@@ -1,0 +1,40 @@
+{
+  "lang": "rust",
+  "mode": "uncommitted",
+  "args": "",
+  "summary": "Uncommitted change turns parse() from Option into Result with typed, line-numbered errors, plus five tests.",
+  "defects": [
+    {
+      "id": "error-variant-and-line",
+      "kind": "tool-survivor",
+      "description": "All three error tests assert only `is_err()`, so neither the error variant nor the line number is checked. Swapping variants or breaking `line_no` (e.g. `i + 1` -> `i * 1`, visible on the duplicate key at line 2) passes. Tests should assert_eq! the exact ParseError, including a line number > 1 and the duplicate key name."
+    },
+    {
+      "id": "values-never-checked",
+      "kind": "hand-mutation",
+      "description": "The success tests assert only `is_ok()` / `len() == 1`; no parsed key or value is ever compared. Dropping the `.trim()` on keys or values, or swapping key and value on insert, passes. A test should compare the whole map (e.g. assert_eq! against a BTreeMap with host=example.com, port=8080)."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "error-variant-and-line",
+      "tool": "config\\.rs:16 .*replace \\+ with \\*"
+    },
+    {
+      "defect": "error-variant-and-line",
+      "hand": {
+        "file": "src/config.rs",
+        "find": "return Err(ParseError::EmptyKey { line: line_no });",
+        "replace": "return Err(ParseError::MissingEquals { line: line_no });"
+      }
+    },
+    {
+      "defect": "values-never-checked",
+      "hand": {
+        "file": "src/config.rs",
+        "find": "out.insert(key.to_string(), v.trim().to_string());",
+        "replace": "out.insert(key.to_string(), v.to_string());"
+      }
+    }
+  ]
+}

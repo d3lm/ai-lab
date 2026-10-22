@@ -1,0 +1,20 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "delete": ["src/util.ts", "test/util.test.ts"],
+  "commit_message": "refactor: rename util.ts to strings.ts, add truncateMiddle\n\nAlso make wrap() handle words longer than the width.",
+  "summary": "Rename util.ts -> strings.ts (tests moved verbatim) plus two behaviour changes: wrap() now splits long words (at hyphens or hard), and a new truncateMiddle(). The moved wrap tests never use a word longer than the width, and the truncateMiddle tests check only length and the ellipsis.",
+  "defects": [
+    {"id": "wrap-change-untested", "kind": "revert-check",
+     "description": "The wrap() behaviour change (splitLong: hyphen splits and hard breaks for words longer than width) has no test; the moved tests pass on the old implementation (every word fits), so splitLong's mutants survive or have no coverage (`word.length <= width`, `hyphen > 0`, `hyphen + 1`, the lastIndexOf bound). Tests need a hyphenated long word (e.g. \"state-of-the-art\" at width 8) and an unhyphenated one longer than width."},
+    {"id": "truncate-middle-split", "kind": "tool-survivor",
+     "description": "`shortens long strings` only asserts the length and that `…` appears, so how the kept characters are split between head and tail (Math.ceil vs floor, `keep - head`) and the `max <= 1` edge are unpinned. Exact expectations are needed, e.g. truncateMiddle(\"abcdefghijklmnop\", 9) === \"abcd…mnop\", an even split case, and max = 1 / 0."}
+  ],
+  "verify": [
+    {"defect": "wrap-change-untested", "hand": {"file": "src/strings.ts", "find": "  if (word.length <= width) return [word];", "replace": "  return [word];"}},
+    {"defect": "wrap-change-untested", "tool": "strings\\.ts:2[0-5] .*"},
+    {"defect": "truncate-middle-split", "hand": {"file": "src/strings.ts", "find": "  const head = Math.ceil(keep / 2);", "replace": "  const head = Math.floor(keep / 2);"}},
+    {"defect": "truncate-middle-split", "tool": "strings\\.ts:3[0-6] .*"}
+  ]
+}

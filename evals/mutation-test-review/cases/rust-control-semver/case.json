@@ -1,0 +1,14 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add version parsing and caret requirements",
+  "summary": "Control case: new semver module whose tests pin exact values, every error variant, and every caret boundary.",
+  "control": true,
+  "defects": [],
+  "verify": [
+    {
+      "control_min_score": 100
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add parseDuration",
+  "summary": "Control case: duration parser whose tests pin exact values for every unit, combinations, whitespace, and exact error messages.",
+  "control": true,
+  "defects": [],
+  "verify": [
+    {
+      "control_min_score": 100
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add LRU cache",
+  "summary": "New generic LRU cache with four tests; the LRU ordering itself is effectively untested.",
+  "defects": [
+    {
+      "id": "guarded-assertion",
+      "kind": "static",
+      "description": "`get_returns_inserted_value` puts its only assertion inside `if let Some(v) = c.get(..)`, so the test passes when get returns None; it cannot fail on its own. It should assert_eq!(c.get(&\"a\"), Some(&1))."
+    },
+    {
+      "id": "lru-order-untested",
+      "kind": "tool-survivor",
+      "description": "`recently_used_survives_eviction` checks the newly inserted key `c`, not that `a` survived and `b` was evicted, so replacing `touch` with `()` (plain FIFO eviction) survives. The LRU ordering, which is the whole point of the type, is unpinned. The test should assert get(&\"a\") == Some(&1) and get(&\"b\") == None."
+    },
+    {
+      "id": "update-value-unchecked",
+      "kind": "hand-mutation",
+      "description": "`updating_existing_key_keeps_size` checks only len(), not that the value changed to 10, so skipping the insert on the update path survives. It also never checks that an update refreshes recency."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "guarded-assertion",
+      "hand": {
+        "file": "src/lru.rs",
+        "find": "        self.map.get(k)\n",
+        "replace": "        None\n"
+      },
+      "only": "get_returns_inserted_value"
+    },
+    {
+      "defect": "lru-order-untested",
+      "tool": "replace LruCache<K, V>::touch with \\(\\)"
+    },
+    {
+      "defect": "update-value-unchecked",
+      "hand": {
+        "file": "src/lru.rs",
+        "find": "            self.map.insert(k, v);\n            return;",
+        "replace": "            return;"
+      }
+    }
+  ]
+}

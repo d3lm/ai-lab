@@ -1,0 +1,21 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add interval merging with property tests",
+  "summary": "Interval merge with two 500-iteration property tests that look rigorous, but the generator never produces overlapping or touching spans (spans sit in separate 10-wide slots), and the properties never check that the output covers the same points as the input.",
+  "defects": [
+    {"id": "generator-never-overlaps", "kind": "hand-mutation",
+     "description": "The generator places span i in [10i, 10i+8), so generated spans never overlap or touch and never arrive out of order; the merge branch is exercised only by the single `merges_overlapping_pair` example. Touching spans (`s.start <= last.end` -> `<`) and unsorted input (dropping `spans.sort()`) survive. The generator needs overlapping, touching, nested and unsorted spans."},
+    {"id": "property-not-coverage-preserving", "kind": "hand-mutation",
+     "description": "Neither property checks that the merged output covers exactly the same integers as the input (only sortedness/disjointness and length), so a merge that drops spans, or `last.end.max(s.end)` -> `s.end` (shrinking a span when a nested one follows), passes. A property should compare the set of covered points (or total length) of input and output."},
+    {"id": "empty-spans-untested", "kind": "tool-survivor",
+     "description": "The generator always produces end > start, so the `retain(|s| s.start < s.end)` filter for empty/inverted spans is never exercised; `<` -> `<=` or removing the retain survives."}
+  ],
+  "verify": [
+    {"defect": "generator-never-overlaps", "hand": {"file": "src/merge.rs", "find": "Some(last) if s.start <= last.end =>", "replace": "Some(last) if s.start < last.end =>"}},
+    {"defect": "generator-never-overlaps", "hand": {"file": "src/merge.rs", "find": "    spans.sort();\n", "replace": ""}},
+    {"defect": "property-not-coverage-preserving", "hand": {"file": "src/merge.rs", "find": "last.end = last.end.max(s.end)", "replace": "last.end = s.end"}},
+    {"defect": "empty-spans-untested", "hand": {"file": "src/merge.rs", "find": "    spans.retain(|s| s.start < s.end);\n", "replace": ""}}
+  ]
+}

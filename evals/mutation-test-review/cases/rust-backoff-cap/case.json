@@ -1,0 +1,35 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "fix: cap backoff delay at max_ms\n\nLong outages produced multi-hour sleeps. Clamp the delay and add tests.",
+  "summary": "One-line production fix (clamp delay to max_ms) plus two new tests. cargo-mutants has nothing useful to mutate on the fixed line.",
+  "defects": [
+    {
+      "id": "cap-never-reached",
+      "kind": "revert-check",
+      "description": "`respects_max_delay` only checks attempts 0..4 (max 800 ms against a 10 s cap), so it never reaches the cap and passes on the pre-fix code; removing `.min(self.max_ms)` survives. The regression test must use an attempt whose uncapped delay exceeds max_ms (e.g. attempt 10 -> 102.4 s) and assert_eq! the delay equals max()."
+    },
+    {
+      "id": "relational-growth",
+      "kind": "hand-mutation",
+      "description": "`delay_grows_with_attempts` only asserts delay(3) > delay(2), so a wrong factor or exponent (e.g. factor+1, attempt+1) passes. It should pin exact values such as 100, 200, 400, 800 ms."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "cap-never-reached",
+      "revert": [
+        "src/lib.rs"
+      ]
+    },
+    {
+      "defect": "relational-growth",
+      "hand": {
+        "file": "src/lib.rs",
+        "find": "self.factor.saturating_pow(attempt)",
+        "replace": "(self.factor + 1).saturating_pow(attempt)"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: fold accents and cut slugs at word boundaries",
+  "summary": "Production change to slugify (accent folding, word-boundary truncation). The truncation behaviour is tested only by scripts/e2e.sh, which CI runs via `make test` but cargo-mutants never runs; accent folding is barely tested anywhere.",
+  "defects": [
+    {"id": "e2e-suite-caught-elsewhere", "kind": "static",
+     "description": "The word-boundary truncation (`out.len() + extra > max_len`, the `extra` computation, `break`) is covered only by scripts/e2e.sh (run by `make test` in CI), which cargo-mutants does not run, so its survivors there are not proven gaps. The report must notice the e2e suite and classify those survivors as caught elsewhere (or spot-check them by running e2e.sh with the mutant applied, which kills them) instead of reporting them as untested. Reporting the truncation logic as an untested gap without mentioning e2e.sh counts as missing this."},
+    {"id": "fold-weakly-tested", "kind": "tool-survivor",
+     "description": "Accent folding is a real gap in both suites: `folds_accents` asserts only `starts_with(\"creme\")`, e2e.sh has no accented input, and most fold arms (e.g. 'ü' -> 'u', 'ñ' -> 'n', uppercase accented letters) are never exercised, so deleting or changing match arms survives. A table-driven assert_eq! over each arm (including uppercase) is needed."}
+  ],
+  "verify": [
+    {"defect": "e2e-suite-caught-elsewhere", "tool": "lib\\.rs:1[5-9] .*(replace > with|replace \\+ with)"},
+    {"defect": "e2e-suite-caught-elsewhere", "hand": {"file": "src/lib.rs", "find": "        if out.len() + extra > max_len {\n            break;\n        }\n", "replace": ""}, "cmd": ["bash", "scripts/e2e.sh"], "expect": "fail"},
+    {"defect": "fold-weakly-tested", "hand": {"file": "src/lib.rs", "find": "        'ù' | 'ú' | 'û' | 'ü' | 'Ü' => 'u',\n", "replace": ""}},
+    {"defect": "fold-weakly-tested", "hand": {"file": "src/lib.rs", "find": "        'ù' | 'ú' | 'û' | 'ü' | 'Ü' => 'u',\n", "replace": ""}, "cmd": ["bash", "scripts/e2e.sh"]}
+  ]
+}

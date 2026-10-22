@@ -1,0 +1,55 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add token bucket rate limiter",
+  "summary": "New TokenBucket with four unit tests that execute every line but pin almost nothing.",
+  "defects": [
+    {
+      "id": "boundary",
+      "kind": "hand-mutation",
+      "description": "The exact boundary where cost equals the available tokens is never tested, so `self.tokens >= cost` -> `>` survives (cargo-mutants does not generate this mutant; it needs a hand-applied mutation or a careful read). A test such as new(3, ..) then try_acquire(3) must succeed."
+    },
+    {
+      "id": "never-empties",
+      "kind": "tool-survivor",
+      "description": "`rejects_when_empty` asks for cost 5 from a bucket of capacity 2, which is rejected regardless of state, so the test never proves the first acquire consumed tokens. Mutating `self.tokens -= cost` to `+=` or `/=` survives. The test should request a cost that would succeed on a full bucket (e.g. 1) after draining it."
+    },
+    {
+      "id": "capacity-cap",
+      "kind": "hand-mutation",
+      "description": "`never_exceeds_capacity` only asserts `available() > 0`, so the `.min(capacity)` cap in refill is unpinned; removing the cap (or returning any positive count) passes. It should assert `available() == 5` (minus the acquired token, i.e. 4) after a long idle period."
+    },
+    {
+      "id": "refill-rate",
+      "kind": "tool-survivor",
+      "description": "`refills_over_time` waits 5 s at 2 tokens/s and only checks that one token is available, so the refill arithmetic (`elapsed * rate` -> `/` or `+`) survives. The test should pin the exact number of tokens refilled (e.g. available() == 10 after 5 s, or a short wait that yields exactly N tokens)."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "boundary",
+      "hand": {
+        "file": "src/bucket.rs",
+        "find": "if self.tokens >= cost as f64",
+        "replace": "if self.tokens > cost as f64"
+      }
+    },
+    {
+      "defect": "never-empties",
+      "tool": "bucket\\.rs:29 .*replace -= with \\+="
+    },
+    {
+      "defect": "capacity-cap",
+      "hand": {
+        "file": "src/bucket.rs",
+        "find": ".min(self.capacity as f64)",
+        "replace": ""
+      }
+    },
+    {
+      "defect": "refill-rate",
+      "tool": "bucket\\.rs:20 .*replace \\* with /"
+    }
+  ]
+}

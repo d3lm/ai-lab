@@ -1,0 +1,38 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "HEAD~1..HEAD",
+  "commit_message": "test: drop redundant adler32 tests\n\nThe Wikipedia vector already covers the algorithm, so the empty and large-input cases add nothing. Add a determinism check instead.",
+  "summary": "Commit deletes two tests as 'redundant' and adds a determinism test. The skill is invoked on the commit range.",
+  "defects": [
+    {
+      "id": "deleted-test-not-redundant",
+      "kind": "hand-mutation",
+      "description": "The deleted `large_input_wraps_modulus` was the only test whose sums exceed 65521, so it was the only one pinning the modular reduction. With it gone, a wrong modulus (e.g. 65536 or 65520) or a missing reduction on `a` survives; the remaining short inputs never wrap. The deletion should be reverted (or replaced with an input that wraps). (Deleting `empty_input_is_one` is defensible: `wikipedia_example` already pins the initial a = 1. A report may say so.)"
+    },
+    {
+      "id": "self-comparison",
+      "kind": "static",
+      "description": "`checksum_is_deterministic` compares a value with itself (`assert_eq!(first, first)`), so it cannot fail; it adds no coverage of correctness. It should compare against a known vector (e.g. 0x5BDC0FDA for the quick brown fox)."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "deleted-test-not-redundant",
+      "hand": {
+        "file": "src/lib.rs",
+        "find": "const MOD: u32 = 65521;",
+        "replace": "const MOD: u32 = 65536;"
+      }
+    },
+    {
+      "defect": "self-comparison",
+      "hand": {
+        "file": "src/lib.rs",
+        "find": "(b << 16) | a",
+        "replace": "a"
+      },
+      "only": "checksum_is_deterministic"
+    }
+  ]
+}

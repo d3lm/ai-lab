@@ -58,11 +58,11 @@ def changed_lines(diff_text):
 def to_ranges(lines):
   ranges = []
 
-  for n in sorted(lines):
-    if ranges and n == ranges[-1][1] + 1:
-      ranges[-1][1] = n
+  for line in sorted(lines):
+    if ranges and line == ranges[-1][1] + 1:
+      ranges[-1][1] = line
     else:
-      ranges.append([n, n])
+      ranges.append([line, line])
 
   return ranges
 
@@ -70,10 +70,26 @@ def to_ranges(lines):
 def main():
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("diff", help="unified diff file, or - for stdin")
-  parser.add_argument("--strip-prefix", default="", help="remove this prefix from paths (e.g. packages/lib/)")
-  parser.add_argument("--include", action="append", default=[], help="glob on the stripped path, repeatable")
-  parser.add_argument("--exclude", action="append", default=[], help="glob on the stripped path, repeatable")
-  parser.add_argument("--format", choices=["stryker", "json", "plain"], default="stryker")
+  parser.add_argument(
+    "--strip-prefix",
+    default="",
+    help="remove this prefix from paths (e.g. packages/lib/)",
+  )
+  parser.add_argument(
+    "--include",
+    action="append",
+    default=[],
+    help="glob on the stripped path, repeatable",
+  )
+  parser.add_argument(
+    "--exclude",
+    action="append",
+    default=[],
+    help="glob on the stripped path, repeatable",
+  )
+  parser.add_argument(
+    "--format", choices=["stryker", "json", "plain"], default="stryker"
+  )
   args = parser.parse_args()
 
   if args.diff == "-":
@@ -91,10 +107,12 @@ def main():
 
       path = path[len(args.strip_prefix) :]
 
-    if args.include and not any(fnmatch.fnmatch(path, g) for g in args.include):
+    if args.include and not any(
+      fnmatch.fnmatch(path, pattern) for pattern in args.include
+    ):
       continue
 
-    if any(fnmatch.fnmatch(path, g) for g in args.exclude):
+    if any(fnmatch.fnmatch(path, pattern) for pattern in args.exclude):
       continue
 
     if lines:
@@ -104,9 +122,15 @@ def main():
     print(json.dumps(selected, indent=2))
   elif args.format == "plain":
     for path, ranges in selected.items():
-      print(path, " ".join(f"{a}-{b}" for a, b in ranges))
+      print(path, " ".join(f"{start}-{end}" for start, end in ranges))
   else:
-    print(",".join(f"{path}:{a}-{b}" for path, ranges in selected.items() for a, b in ranges))
+    print(
+      ",".join(
+        f"{path}:{start}-{end}"
+        for path, ranges in selected.items()
+        for start, end in ranges
+      )
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,52 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add withRetry helper with exponential backoff",
+  "summary": "New async retry helper with four vitest tests; the no-retry and backoff behaviour is not actually pinned.",
+  "defects": [
+    {
+      "id": "try-catch-swallows",
+      "kind": "static",
+      "description": "`does not retry client errors` asserts inside a catch block with no expect.assertions / fail-on-resolve, so it passes if withRetry resolves instead of throwing. It should use `await expect(...).rejects` (or expect.assertions(n))."
+    },
+    {
+      "id": "no-retry-unverified",
+      "kind": "tool-survivor",
+      "description": "The same test checks `toHaveBeenCalled()` instead of `toHaveBeenCalledTimes(1)`, so retrying 4xx errors is not caught: mutating `err.status < 500` (to `<= 500`, `>= 500`, or `false`) survives. The name promises the no-retry behaviour that the body never checks."
+    },
+    {
+      "id": "attempt-count",
+      "kind": "tool-survivor",
+      "description": "`gives up after the configured retries` checks only that it rejects, not that fn ran retries+1 = 3 times; `attempt <= opts.retries` -> `<` survives. Off-by-one in retry count is untested."
+    },
+    {
+      "id": "backoff-delays",
+      "kind": "tool-survivor",
+      "description": "Every test passes `noSleep` and never inspects the delays, so the backoff schedule (`delayMs * 2 ** attempt`, and `attempt < opts.retries` controlling the last sleep) is unpinned; arithmetic mutants survive. A `vi.fn()` sleep should be asserted to receive [10, 20] for retries: 2."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "try-catch-swallows",
+      "hand": {
+        "file": "src/retry.ts",
+        "find": "if (err instanceof HttpError && err.status < 500) throw err;",
+        "replace": "if (err instanceof HttpError && err.status < 500) return undefined as T;"
+      },
+      "only": "does not retry client errors"
+    },
+    {
+      "defect": "no-retry-unverified",
+      "tool": "retry\\.ts:25 .*err\\.status <= 500"
+    },
+    {
+      "defect": "attempt-count",
+      "tool": "retry\\.ts:20 .*attempt < opts\\.retries"
+    },
+    {
+      "defect": "backoff-delays",
+      "tool": "retry\\.ts:26 .*opts\\.delayMs / 2"
+    }
+  ]
+}

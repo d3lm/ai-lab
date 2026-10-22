@@ -1,0 +1,27 @@
+{
+  "counts": {
+    "killed": 11,
+    "survived": 6,
+    "no_coverage": 0,
+    "timeout": 6,
+    "error": 0
+  },
+  "score": 73.9,
+  "survivors": [
+    "ttl-cache.ts:26 [survived] ConditionalExpression: replace `!entry` with `false`",
+    "ttl-cache.ts:27 [survived] EqualityOperator: replace `this.now() >= entry.expiresAt` with `this.now() > entry.expiresAt`",
+    "ttl-cache.ts:28 [survived] CallExpression: replace `this.entries.delete(key);` with `;`",
+    "ttl-cache.ts:39 [survived] ConditionalExpression: replace `now >= entry.expiresAt` with `true`",
+    "ttl-cache.ts:39 [survived] EqualityOperator: replace `now >= entry.expiresAt` with `now > entry.expiresAt`",
+    "ttl-cache.ts:39 [survived] EqualityOperator: replace `now >= entry.expiresAt` with `now < entry.expiresAt`"
+  ],
+  "timeouts": [
+    "ttl-cache.ts:27 [timeout] BlockStatement: replace with `{}`",
+    "ttl-cache.ts:35 [timeout] BlockStatement: replace with `{}`",
+    "ttl-cache.ts:38 [timeout] BlockStatement: replace with `{}`",
+    "ttl-cache.ts:39 [timeout] ConditionalExpression: replace `now >= entry.expiresAt` with `false`",
+    "ttl-cache.ts:39 [timeout] BlockStatement: replace with `{}`",
+    "ttl-cache.ts:41 [timeout] UpdateOperator: replace `removed++` with `removed--`"
+  ],
+  "note": "Whole-package Stryker run. The timed-out mutants were hanging in waitFor until Stryker's timeout; they count as detected even though no assertion failed."
+}

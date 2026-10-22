@@ -1,0 +1,42 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "test: add access control tests",
+  "summary": "Test-only change: six integration tests for can_read/can_write. Mutants must target src/lib.rs, which the diff does not touch.",
+  "defects": [
+    {
+      "id": "no-read-denial",
+      "kind": "tool-survivor",
+      "description": "No test ever expects can_read to return false (e.g. a member outside the owner and group on a private document), so replacing can_read with `true` survives. This is a permission check, so the gap is high risk."
+    },
+    {
+      "id": "fixture-ids-collide",
+      "kind": "static",
+      "description": "The fixtures give the user id 1, group 1, and the document owner 1, group 1, so the owner and group-member tests cannot tell which rule granted access; `group_member_can_read` is identical to `owner_can_read`. Mutating `||` to `&&` between the owner and group checks, or `user.group_id == doc.group_id` to compare the wrong field, survives. Fixtures need distinct ids (owner-only user, group-only user)."
+    },
+    {
+      "id": "no-write-denial-for-member",
+      "kind": "tool-survivor",
+      "description": "No test checks that a non-owner Member is denied write; mutating `user.role == Role::Admin` to `!=` in can_write survives because the only Member fixture is also the owner."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "no-read-denial",
+      "tool": "replace can_read -> bool with true"
+    },
+    {
+      "defect": "fixture-ids-collide",
+      "hand": {
+        "file": "src/lib.rs",
+        "find": "user.group_id == doc.group_id",
+        "replace": "user.id == doc.group_id"
+      }
+    },
+    {
+      "defect": "no-write-denial-for-member",
+      "tool": "lib\\.rs:33 .*replace == with !="
+    }
+  ]
+}

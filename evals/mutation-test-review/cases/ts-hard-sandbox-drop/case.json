@@ -1,0 +1,36 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "pkg": "packages/codec",
+  "commit_message": "feat(codec): add base64url encode/decode",
+  "summary": "Monorepo package packages/codec. Most coverage comes from vectors.test.ts, which imports ../../../shared/vectors.json from outside the package; Stryker's sandbox copies only the package, so that file fails to load there and its 12 tests drop out of the run.",
+  "defects": [
+    {
+      "id": "sandbox-drops-vector-tests",
+      "kind": "static",
+      "description": "vectors.test.ts imports `../../../shared/vectors.json`, which is outside packages/codec, so in Stryker's default sandbox the file does not load and the run has 1 test instead of 13. The report must notice the test-count drop (or the import) and rerun correctly (inPlace in a scratch worktree, or equivalent); survivors from the sandboxed run are mostly false alarms. Reporting the encode/decode logic as untested on the strength of the sandboxed run counts as missing this (and as a false claim)."
+    },
+    {
+      "id": "dangling-length-untested",
+      "kind": "tool-survivor",
+      "description": "Even with all 13 tests running, the `text.length % 4 === 1` length check is never exercised (no vector or error test has a length of 4n+1, e.g. \"Zm9vY\"), so it survives; only one invalid-character case is tested and its message is unpinned."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "sandbox-drops-vector-tests",
+      "baseline": "Tests\\s+13 passed"
+    },
+    {
+      "defect": "dangling-length-untested",
+      "hand": {
+        "file": "src/base64url.ts",
+        "find": "  if (text.length % 4 === 1) throw new SyntaxError(\"invalid base64url length\");\n",
+        "replace": ""
+      }
+    }
+  ],
+  "verify_in_place": true,
+  "ground_truth_note": "Run with Stryker inPlace so all 13 tests execute. In Stryker's default sandbox, vectors.test.ts fails to load and only 1 test runs, which makes most encode/decode mutants look NoCoverage/Survived; those sandboxed results are wrong."
+}
