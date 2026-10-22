@@ -1,0 +1,17 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: loyalty discounts and reduced VAT rates",
+  "summary": "Adds reduced VAT rates to tax.ts and a PriceCalculator. The test file vi.mock()s the whole tax module (the other half of this change) and spies the loyalty discount away with mockReturnValue, so the new logic is replaced by test doubles.",
+  "defects": [
+    {"id": "tax-module-mocked", "kind": "tool-survivor",
+     "description": "`vi.mock(\"../src/tax\", () => ({ vatFor: () => 0.2 }))` replaces the module this change edits, so the new reduced-rate logic and NL rates in tax.ts are never executed (Stryker NoCoverage/Survived on tax.ts), and `uses the reduced rate for reduced items` passes with the mocked 20% rate (it only asserts > 1000). Tax tests must use the real module and pin exact rates (DE reduced 7%, FR 5.5%, fallback to standard rate for GB, unknown country 0)."},
+    {"id": "discount-mocked-away", "kind": "tool-survivor",
+     "description": "`applies the loyalty discount` stubs loyaltyDiscount with mockReturnValue(100), so the real 1%-per-year and the 10% cap (`Math.min(this.loyaltyYears, 10)`) and rounding are never tested; arithmetic and Math.min/max mutants in loyaltyDiscount survive. It should call the real method with e.g. 5 years and 15 years (capped)."}
+  ],
+  "verify": [
+    {"defect": "tax-module-mocked", "tool": "tax\\.ts:.*"},
+    {"defect": "discount-mocked-away", "tool": "pricing\\.ts:1[6-8] .*"}
+  ]
+}

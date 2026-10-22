@@ -1,0 +1,35 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "HEAD~1..HEAD",
+  "commit_message": "fix: clamp range end to the last byte\n\nA range ending past the resource returned end == size, one byte past the end.",
+  "summary": "Off-by-one fix (clamp to size - 1) with a regression test that never exercises the clamp.",
+  "defects": [
+    {
+      "id": "regression-test-passes-on-old-code",
+      "kind": "revert-check",
+      "description": "`clamps the end to the last byte` uses 500-999 on a 1000-byte resource, where the requested end is already the last byte, so no clamping happens and the test passes on the pre-fix code (`size`); `size - 1` -> `size` / `size + 1` survives. The test needs an end beyond the resource, e.g. parseRange(\"500-5000\", 1000) -> [500, 999]."
+    },
+    {
+      "id": "unsatisfiable-path",
+      "kind": "tool-survivor",
+      "description": "The RangeError path (start beyond the clamped end, e.g. \"1000-1200\" on 1000 bytes, whose behaviour this fix changes from [1000, 1000] to an error) has no test; `start > end` -> `>=` or `false` survives."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "regression-test-passes-on-old-code",
+      "revert": [
+        "src/range.ts"
+      ]
+    },
+    {
+      "defect": "regression-test-passes-on-old-code",
+      "tool": "range\\.ts:10 .*size \\+ 1"
+    },
+    {
+      "defect": "unsatisfiable-path",
+      "tool": "range\\.ts:11 .*start >= end"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "lang": "rust",
+  "mode": "uncommitted",
+  "args": "",
+  "summary": "Uncommitted LEB128 varint codec (protocol encoding) with a roundtrip test over single-byte values only.",
+  "defects": [
+    {
+      "id": "single-byte-only",
+      "kind": "tool-survivor",
+      "description": "The roundtrip test only uses values below 128, so the multi-byte path (continuation bit `| 0x80`, `value >>= 7`, the shift `7 * i`) never runs with more than one byte; mutants there survive. Values such as 128, 300, 16384 and u64::MAX are needed."
+    },
+    {
+      "id": "no-golden-bytes",
+      "kind": "static",
+      "description": "Only roundtrips are tested, never the encoded bytes, so a bug made symmetrically in encode and decode (wrong group size, wrong bit order) would pass. This is a wire format, so tests should pin known encodings, e.g. 300 -> [0xAC, 0x02], 1 -> [0x01]."
+    },
+    {
+      "id": "consumed-length-unchecked",
+      "kind": "tool-survivor",
+      "description": "The consumed byte count (`.1` of decode's result) is never asserted, so `i + 1` -> `i * 1` survives. Callers framing a stream depend on it."
+    },
+    {
+      "id": "error-variants",
+      "kind": "tool-survivor",
+      "description": "`decode_rejects_truncated` asserts only is_err(), not DecodeError::Truncated, and the Overflow path (11+ continuation bytes, `i >= 10`) has no test at all, so `>=` -> `>` and swapping the variants survive."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "single-byte-only",
+      "tool": "varint\\.rs:15 .*replace >>= with <<="
+    },
+    {
+      "defect": "no-golden-bytes",
+      "hand": [
+        {
+          "file": "src/varint.rs",
+          "find": "let byte = (value & 0x7f) as u8;",
+          "replace": "let byte = (value & 0x3f) as u8;"
+        },
+        {
+          "file": "src/varint.rs",
+          "find": "value >>= 7;",
+          "replace": "value >>= 6;"
+        },
+        {
+          "file": "src/varint.rs",
+          "find": "result |= ((byte & 0x7f) as u64) << (7 * i);",
+          "replace": "result |= ((byte & 0x3f) as u64) << (6 * i);"
+        }
+      ]
+    },
+    {
+      "defect": "consumed-length-unchecked",
+      "tool": "varint\\.rs:34 .*replace \\+ with \\*"
+    },
+    {
+      "defect": "error-variants",
+      "hand": {
+        "file": "src/varint.rs",
+        "find": "if i >= 10 {",
+        "replace": "if i >= 9 {"
+      }
+    }
+  ]
+}

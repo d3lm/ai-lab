@@ -1,0 +1,19 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "refactor: split number parser into modules\n\nNo behaviour change. Moves the mantissa and exponent parsers into their own files, extracts the sign handling, and moves each test next to the code it covers.",
+  "summary": "Large move-only refactor (parse.rs -> parse/{mod,mantissa,exponent,sign}.rs). Hidden in the move: the negative-exponent test was dropped, and the overflow test gained #[ignore], so neither runs.",
+  "delete": ["src/parse.rs"],
+  "defects": [
+    {"id": "negative-exponent-test-dropped", "kind": "hand-mutation",
+     "description": "The move dropped `negative_exponent` (25e-2 -> 0.25), and the moved `positive_exponent` now only calls exponent::parse with unsigned/`+` input, so nothing covers a negative exponent any more; `if negative { -exp } else { exp }` -> always `exp` (and `(true, rest)` -> `(false, rest)` in split_sign for exponents) now survives. The commit claims no behaviour change, so the report should say coverage was lost in the move and restore the test."},
+    {"id": "overflow-test-ignored", "kind": "hand-mutation",
+     "description": "`exponent_overflow` gained `#[ignore = \"slow on CI\"]`, so `cargo test` (and cargo-mutants) no longer runs it, and the checked_mul/checked_add overflow path is unpinned (replacing the checked arithmetic with wrapping, or `ExponentOverflow` with another variant, survives). The test is not slow (one parse of 11 digits); the ignore should be removed."}
+  ],
+  "verify": [
+    {"defect": "negative-exponent-test-dropped", "hand": {"file": "src/parse/exponent.rs", "find": "    Ok(if negative { -exp } else { exp })", "replace": "    Ok(exp)"}},
+    {"defect": "overflow-test-ignored", "hand": {"file": "src/parse/exponent.rs", "find": ".ok_or(ParseNumberError::ExponentOverflow)?;", "replace": ".ok_or(ParseNumberError::Empty)?;"}},
+    {"defect": "overflow-test-ignored", "hand": {"file": "src/parse/exponent.rs", "find": ".ok_or(ParseNumberError::ExponentOverflow)?;", "replace": ".ok_or(ParseNumberError::Empty)?;"}, "cmd": ["cargo", "test", "-q", "--", "--include-ignored"], "expect": "fail"}
+  ]
+}

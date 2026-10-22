@@ -190,7 +190,11 @@ def render_markdown(mutants, counts, scores, source):
     f"| {counts['error']} | {pct(scores['score'])} | {pct(scores['covered_score'])} |"
   )
 
-  for status, title in [("survived", "Survived"), ("no_coverage", "No coverage"), ("timeout", "Timed out")]:
+  for status, title in [
+    ("survived", "Survived"),
+    ("no_coverage", "No coverage"),
+    ("timeout", "Timed out"),
+  ]:
     group = [mutant for mutant in mutants if mutant["status"] == status]
 
     if not group:
@@ -198,7 +202,10 @@ def render_markdown(mutants, counts, scores, source):
 
     out += ["", f"## {title} ({len(group)})", ""]
 
-    for mutant in sorted(group, key=lambda mutant: (mutant["file"], mutant["line"] or 0, mutant["column"] or 0)):
+    for mutant in sorted(
+      group,
+      key=lambda mutant: (mutant["file"], mutant["line"] or 0, mutant["column"] or 0),
+    ):
       where = f"{mutant['file']}:{mutant['line']}:{mutant['column']}"
       extra = f" (diff at {mutant['diff']})" if mutant.get("diff") else ""
       out.append(f"- `{where}` {mutant['description']}{extra}")
@@ -218,7 +225,11 @@ def main():
   parser.add_argument("report", help="outcomes.json (cargo-mutants) or mutation.json (Stryker)")
   parser.add_argument("--diff", help="keep only mutants on lines this unified diff adds or changes")
   parser.add_argument("--lcov", help="reclassify survivors on unexecuted lines as no_coverage")
-  parser.add_argument("--root", default="", help="prefix for report paths so they match repo-relative diff paths")
+  parser.add_argument(
+    "--root",
+    default="",
+    help="prefix for report paths so they match repo-relative diff paths",
+  )
   parser.add_argument("--format", choices=["md", "json"], default="md")
   args = parser.parse_args()
 
@@ -255,7 +266,12 @@ def main():
   scores = score(counts)
 
   if args.format == "json":
-    print(json.dumps({"source": source, "counts": dict(counts), **scores, "mutants": mutants}, indent=2))
+    print(
+      json.dumps(
+        {"source": source, "counts": dict(counts), **scores, "mutants": mutants},
+        indent=2,
+      )
+    )
   else:
     print(render_markdown(mutants, counts, scores, source))
 

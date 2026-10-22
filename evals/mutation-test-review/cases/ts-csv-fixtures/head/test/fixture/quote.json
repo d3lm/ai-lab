@@ -1,0 +1,1 @@
+{ "input": "say \"hi\"", "expected": "\"say \"\"hi\"\"\"" }

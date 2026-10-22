@@ -1,0 +1,46 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: load config from APP_* environment variables",
+  "summary": "Config loader whose tests guard every assertion behind `if (result.ok)` / `if (!result.ok)`, and whose no-warning test spies on console.error while warnings go to console.warn.",
+  "defects": [
+    {
+      "id": "conditional-assertions",
+      "kind": "static",
+      "description": "Every loadConfig test asserts only inside `if (result.ok)` or `if (!result.ok)` with no expect.assertions / no assertion on `ok`, so a test passes when the result has the other shape: e.g. if the port validation always fails, `uses defaults` and `reads overrides` still pass; if it never fails, `rejects an invalid port` still passes. Mutants such as the port check -> `false` survive. Tests should assert `result` with toEqual({ ok: true, config: ... }) / toEqual({ ok: false, error: ... })."
+    },
+    {
+      "id": "spy-wrong-channel",
+      "kind": "static",
+      "description": "`does not warn about known settings` spies on `console.error`, but warn() writes to `console.warn` (and log.warnings), so `expect(spy).not.toHaveBeenCalled()` is vacuous: it passes even when known settings do warn, and there is no positive control showing the spy sees a warning for an unknown APP_* key. Spy on the real channel (or assert log.warnings) and add a positive case."
+    },
+    {
+      "id": "port-boundaries",
+      "kind": "tool-survivor",
+      "description": "Only 70000 is tested as invalid; the boundaries 0/1 and 65535/65536, non-integers (\"80.5\"), and non-numbers are untested, so `port < 1` -> `<= 1`, `port > 65535` -> `>=`, and the isInteger check survive. The host override is never asserted either."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "conditional-assertions",
+      "hand": {
+        "file": "src/config.ts",
+        "find": "    if (!Number.isInteger(port) || port < 1 || port > 65535) {",
+        "replace": "    if (true) {"
+      }
+    },
+    {
+      "defect": "spy-wrong-channel",
+      "hand": {
+        "file": "src/config.ts",
+        "find": "    if (key.startsWith(\"APP_\") && !",
+        "replace": "    if (key.startsWith(\"APP_\") || !"
+      }
+    },
+    {
+      "defect": "port-boundaries",
+      "tool": "config\\.ts:18 .*"
+    }
+  ]
+}

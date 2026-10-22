@@ -1,0 +1,33 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add ledger transfers with overdraft limit",
+  "summary": "New Ledger::transfer. The integration tests look thorough (exact values, boundaries, error variants) but exercise a FakeLedger that re-implements the rules; the production Ledger is never constructed in any test.",
+  "defects": [
+    {
+      "id": "tests-exercise-a-copy",
+      "kind": "tool-survivor",
+      "description": "Every test runs against `FakeLedger`, a hand-written copy of the transfer rules, so the production `Ledger<S>::transfer` is never executed; every mutant in src/ledger.rs survives (replace transfer with Ok(()), `<=` / `>` flips, `-`/`+` swaps) even though the tests themselves look precise. The tests should construct `Ledger { store: MemStore::default(), .. }` (MemStore already exists) and drop the fake. This is money movement, so it is the highest-risk gap."
+    },
+    {
+      "id": "store-writes-unverified",
+      "kind": "static",
+      "description": "Even once pointed at Ledger, nothing checks the store-level effects specific to the real implementation: that both set_balance calls happen with the new balances (and that a rejected transfer writes nothing). The fake updates its own map, so the read-modify-write through `Store` is untested. Tests should assert MemStore balances after success and unchanged balances after each error."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "tests-exercise-a-copy",
+      "tool": "ledger\\.rs:.*replace <impl Transfers for Ledger<S>>::transfer -> Result<\\(\\), TransferError> with Ok\\(\\(\\)\\)"
+    },
+    {
+      "defect": "store-writes-unverified",
+      "hand": {
+        "file": "src/ledger.rs",
+        "find": "        self.store.set_balance(to, to_balance + cents);\n",
+        "replace": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add formatMoney with snapshot tests",
+  "summary": "Money formatter tested by a snapshot that was recorded from buggy output: single-digit cents render as one decimal (\"0,5 €\", \"1,0 €\"), contradicting the documented two-decimal contract. Mutation testing mostly reports killed, because the snapshot pins the bug.",
+  "defects": [
+    {"id": "snapshot-pins-bug", "kind": "static",
+     "description": "The committed snapshot contains \"0,0 €\", \"0,5 €\", \"1,0 €\" and \"1.000.000,0 €\", which violate the doc comment's 'exactly two decimals' (should be \"0,05 €\", \"1,00 €\"). The no-op ternary `rest < 10 ? String(rest) : String(rest)` (meant to pad) is the bug, and the snapshot enshrines it, so the test would fail if the bug were fixed. The report should call out that the snapshot contradicts the contract (and that the high kill rate is meaningless here) and recommend explicit toBe assertions for each amount."},
+    {"id": "negative-amounts-untested", "kind": "tool-survivor",
+     "description": "No snapshot input is negative, so the sign handling (`cents < 0`, the `\"-\"` prefix, Math.abs) is unpinned; `cents < 0` -> `false` or the `\"-\"` literal -> `\"\"` survives."}
+  ],
+  "verify": [
+    {"defect": "snapshot-pins-bug", "hand": {"file": "src/format.ts", "find": "const decimals = rest < 10 ? String(rest) : String(rest);", "replace": "const decimals = String(rest).padStart(2, \"0\");"}, "expect": "fail"},
+    {"defect": "negative-amounts-untested", "tool": "format\\.ts:7 .*"}
+  ]
+}

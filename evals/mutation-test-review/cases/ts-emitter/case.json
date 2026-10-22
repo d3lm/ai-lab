@@ -1,0 +1,38 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add typed event emitter",
+  "summary": "New Emitter class; the removal test is a negative test without a positive control, and once() is checked with a single emit.",
+  "defects": [
+    {
+      "id": "removal-wrong-event",
+      "kind": "static",
+      "description": "`does not call a listener after it is removed` subscribes to \"save\" but emits \"close\", so it passes even if off()/the unsubscribe function does nothing (`set?.delete(fn)` removed, or the returned closure emptied, survives). It is a negative test without a positive control; it must emit \"save\" after unsubscribing."
+    },
+    {
+      "id": "once-single-emit",
+      "kind": "tool-survivor",
+      "description": "`once listeners fire once` emits a single time and checks `toHaveBeenCalled()`, so removing the `off()` call inside once (listener fires on every emit) survives. It should emit twice and assert toHaveBeenCalledTimes(1) with the first payload."
+    },
+    {
+      "id": "listener-cleanup",
+      "kind": "tool-survivor",
+      "description": "listenerCount and the cleanup of empty listener sets in off() have no coverage at all (NoCoverage mutants). Lower priority than the two above."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "removal-wrong-event",
+      "tool": "emitter\\.ts:15 .*\\(\\) => this\\.off\\(event, fn\\)` with `\\(\\) => undefined"
+    },
+    {
+      "defect": "once-single-emit",
+      "tool": "emitter\\.ts:27 .*off\\(\\);` with `;"
+    },
+    {
+      "defect": "listener-cleanup",
+      "tool": "emitter\\.ts:3[78] \\[no_coverage\\]"
+    }
+  ]
+}

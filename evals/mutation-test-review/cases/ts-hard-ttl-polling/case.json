@@ -1,0 +1,47 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add TtlCache",
+  "summary": "TTL cache whose tests use real timers and a polling waitFor with a 5 s timeout. Mutants that break expiry make the tests hang until the timeout, so Stryker scores them as Timeout (detected) and the score is inflated; the injected Clock is never used.",
+  "defects": [
+    {
+      "id": "polling-turns-bugs-into-timeouts",
+      "kind": "tool-survivor",
+      "description": "`expires entries after the ttl` and `prune removes expired entries` poll with waitFor (5 s timeout) instead of asserting, so mutants that break expiry (e.g. `now() >= expiresAt` -> `false`, `+ ttlMs` -> `- ttlMs` variants) make the test hang until Stryker's timeout and are counted as Timeout (detected), inflating the score. The report should flag the timeout share, explain it, and recommend the injected `Clock` (or vi.useFakeTimers) with direct assertions."
+    },
+    {
+      "id": "expiry-boundary",
+      "kind": "hand-mutation",
+      "description": "The documented boundary (expired once `now >= expiresAt`) is never tested at the exact instant; `>=` -> `>` in get() or prune() survives. With the injected clock, a test can set now = expiresAt - 1 and = expiresAt."
+    },
+    {
+      "id": "prune-count-and-survivors",
+      "kind": "tool-survivor",
+      "description": "`prune removes expired entries` asserts only `prune() > 0` then `size < 2`, so the returned count and which entries remain are unpinned (`removed++` -> `removed--`/no-op variants, deleting unexpired entries); there is no mix of expired and live entries. Real-timer sleeps also make the rewrite test timing-sensitive (80 ms ttl, 2 x 50 ms sleeps)."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "polling-turns-bugs-into-timeouts",
+      "timeouts_min": 3
+    },
+    {
+      "defect": "expiry-boundary",
+      "hand": {
+        "file": "src/ttl-cache.ts",
+        "find": "    if (this.now() >= entry.expiresAt) {",
+        "replace": "    if (this.now() > entry.expiresAt) {"
+      }
+    },
+    {
+      "defect": "prune-count-and-survivors",
+      "hand": {
+        "file": "src/ttl-cache.ts",
+        "find": "        removed++;",
+        "replace": "        removed += 2;"
+      }
+    }
+  ],
+  "ground_truth_note": "Whole-package Stryker run. The timed-out mutants were hanging in waitFor until Stryker's timeout; they count as detected even though no assertion failed."
+}

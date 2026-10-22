@@ -1,0 +1,51 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add table renderer with golden tests",
+  "summary": "Table renderer whose whole job is padding and alignment, tested by a golden file that is compared after splitting on whitespace, so padding and alignment are invisible to the test; the golden helper also passes trivially in update mode.",
+  "defects": [
+    {
+      "id": "golden-ignores-padding",
+      "kind": "tool-survivor",
+      "description": "`check_golden` compares `split_whitespace()` tokens, so all padding and alignment is discarded before comparison: swapping Left/Right alignment, dropping the pad, or changing the column separator survive (pad/repeat mutants, `widths[i] - count` -> `+`). For a renderer whose purpose is layout, the golden must be compared byte-for-byte (assert_eq! on the strings)."
+    },
+    {
+      "id": "update-golden-self-pass",
+      "kind": "static",
+      "description": "With UPDATE_GOLDEN set, check_golden writes the actual output and then compares it with itself, so the test cannot fail in that mode (a regenerated golden enshrines whatever the code does). It should write and return, or fail loudly, rather than pass silently."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "golden-ignores-padding",
+      "hand": {
+        "file": "src/table.rs",
+        "find": "                Align::Right => {\n                    line.push_str(&\" \".repeat(pad));\n                    line.push_str(&cell);\n                }",
+        "replace": "                Align::Right => {\n                    line.push_str(&cell);\n                    line.push_str(&\" \".repeat(pad));\n                }"
+      }
+    },
+    {
+      "defect": "golden-ignores-padding",
+      "tool": "table\\.rs:.*"
+    },
+    {
+      "defect": "update-golden-self-pass",
+      "hand": {
+        "file": "src/table.rs",
+        "find": "        out.push_str(line.trim_end());",
+        "replace": "        out.push_str(line.trim_end());\n        out.push_str(\" X\");"
+      },
+      "cmd": [
+        "env",
+        "UPDATE_GOLDEN=1",
+        "cargo",
+        "test",
+        "-q",
+        "--test",
+        "golden",
+        "basic_table"
+      ]
+    }
+  ]
+}

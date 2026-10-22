@@ -1,0 +1,32 @@
+{
+  "lang": "ts",
+  "mode": "uncommitted",
+  "args": "",
+  "summary": "Uncommitted rewrite from boolean to a result type with per-rule reasons; tests check validity only, far from the length limits.",
+  "defects": [
+    {
+      "id": "length-boundaries",
+      "kind": "tool-survivor",
+      "description": "The length tests use 1 and 30 characters, far from the 3 and 20 limits, so `name.length < 3` -> `<= 3` and `> 20` -> `>= 20` survive. Tests need names of exactly 2, 3, 20 and 21 characters."
+    },
+    {
+      "id": "reasons-unpinned",
+      "kind": "tool-survivor",
+      "description": "The rejection tests assert only `valid === false`, and `reports why a name is rejected` uses `toHaveProperty(\"reason\")`, which passes for any reason. The reason codes are user-facing, yet mutating any reason string (or reordering the checks so a different rule fires) survives. Each rejection should assert toEqual({ valid: false, reason: ... })."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "length-boundaries",
+      "tool": "validate\\.ts:11 .*name\\.length <= 3"
+    },
+    {
+      "defect": "length-boundaries",
+      "tool": "validate\\.ts:12 .*name\\.length >= 20"
+    },
+    {
+      "defect": "reasons-unpinned",
+      "tool": "validate\\.ts:11 .*\\\"too_short\\\"` with `\\\"\\\""
+    }
+  ]
+}

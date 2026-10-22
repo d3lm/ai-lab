@@ -1,0 +1,40 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add CSV field escaping with fixture-driven tests",
+  "summary": "CSV escaping with fixture files in test/fixture/, but the test reads test/fixtures/ and silently generates zero fixture tests.",
+  "defects": [
+    {
+      "id": "fixture-loop-empty",
+      "kind": "static",
+      "description": "The test reads `./fixtures/` but the files live in `test/fixture/` (singular), and the existsSync guard turns the typo into an empty loop, so none of the three fixture tests is ever registered; vitest runs 2 tests, not 5. The quoting branch therefore has no coverage (NoCoverage / survived mutants on the regex and the replace). The path should be fixed and the guard removed so a missing directory fails loudly."
+    },
+    {
+      "id": "no-carriage-return-case",
+      "kind": "hand-mutation",
+      "description": "Even with the path fixed, no fixture contains a carriage return, so dropping `\\r` from the character class survives. A `\\r` case (and a toCsvRow case with a field that needs quoting) is needed."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "fixture-loop-empty",
+      "tool": "csv\\.ts:3 \\[(survived|no_coverage)\\]"
+    },
+    {
+      "defect": "no-carriage-return-case",
+      "hand": [
+        {
+          "file": "test/csv.test.ts",
+          "find": "new URL(\"./fixtures/\", import.meta.url)",
+          "replace": "new URL(\"./fixture/\", import.meta.url)"
+        },
+        {
+          "file": "src/csv.ts",
+          "find": "/[\",\\r\\n]/",
+          "replace": "/[\",\\n]/"
+        }
+      ]
+    }
+  ]
+}

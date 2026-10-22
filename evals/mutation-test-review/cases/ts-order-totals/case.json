@@ -1,0 +1,37 @@
+{
+  "lang": "ts",
+  "mode": "uncommitted",
+  "args": "",
+  "summary": "Uncommitted order-total computation; the service test asserts the mock's canned return value and computeTotals is checked with toBeTruthy.",
+  "defects": [
+    {
+      "id": "asserts-mock-return",
+      "kind": "tool-survivor",
+      "description": "`places an order with a coupon` asserts `order.totalCents` from the mocked repo.save, which returns the canned `saved` object, so it checks the fixture rather than the computation; any totals bug passes. It should assert what save was called with (toHaveBeenCalledWith with subtotal 2000, discount 200, total 1800)."
+    },
+    {
+      "id": "truthy-object",
+      "kind": "static",
+      "description": "`computes totals` uses toBeTruthy() on an object, which is always truthy, so the test cannot fail; every arithmetic mutant in computeTotals (reduce, `*`, `-`, rounding) survives."
+    },
+    {
+      "id": "coupon-clamp",
+      "kind": "tool-survivor",
+      "description": "The coupon clamp to 0..50% (Math.min/Math.max, MAX_COUPON_PERCENT) and rounding to whole cents are never tested; coupons above 50, negative coupons, and an odd subtotal (rounding) are needed."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "asserts-mock-return",
+      "tool": "orders\\.ts:18 .*ObjectLiteral"
+    },
+    {
+      "defect": "truthy-object",
+      "tool": "orders\\.ts:10 .*with `\\{\\}`"
+    },
+    {
+      "defect": "coupon-clamp",
+      "tool": "orders\\.ts:8 .*Math\\.max\\(Math\\.max\\(couponPercent, 0\\), MAX_COUPON_PERCENT\\)"
+    }
+  ]
+}

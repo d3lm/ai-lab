@@ -1,0 +1,54 @@
+{
+  "lang": "rust",
+  "mode": "branch",
+  "args": "",
+  "commit_message": "feat: add frame encode/decode\n\nAlso document the error type and re-export the public API.",
+  "summary": "Protocol frame codec (RFC 6455 header) across several files, with doc-only distractor edits in error.rs and mask.rs. Tests cover the 7-bit and 16-bit length forms but never the boundaries, the 64-bit form, masked decoding, or the size limit.",
+  "defects": [
+    {
+      "id": "length-form-boundaries",
+      "kind": "hand-mutation",
+      "description": "No test sits on a length-form boundary (125/126, 65535/65536), and nothing exercises the 64-bit form (> 65535 bytes), so `len < 126` -> `<= 126`, `len <= 0xffff` -> `<`, and errors in the 127 branch survive. This is wire encoding, so it is high risk; golden header bytes at 125, 126, 65535 and 65536 are needed."
+    },
+    {
+      "id": "mask-roundtrip-untested",
+      "kind": "tool-survivor",
+      "description": "`masked_payload_differs_on_the_wire` only asserts the masked bytes differ from the payload; no test decodes a masked frame or pins the masked bytes. Wrong key indexing (`i % 4` -> `i % 3`), skipping the unmask in decode, or the mask bit being dropped all survive. A roundtrip of a masked frame plus golden masked bytes are needed."
+    },
+    {
+      "id": "size-limit-and-truncation-detail",
+      "kind": "tool-survivor",
+      "description": "The MAX_PAYLOAD check (`len > MAX_PAYLOAD` / FrameError::TooLarge) is never tested, and `rejects_truncated_input` uses only is_err(), so the `needed` counts in every Truncated error (and truncation inside the extended-length or mask-key fields) are unpinned. Tests should assert_eq! exact errors, including TooLarge for a 127-form header declaring MAX_PAYLOAD + 1."
+    }
+  ],
+  "verify": [
+    {
+      "defect": "length-form-boundaries",
+      "tool": "frame\\.rs:22 .*replace < with <= in encode"
+    },
+    {
+      "defect": "length-form-boundaries",
+      "tool": "frame\\.rs:24 .*replace <= with > in encode"
+    },
+    {
+      "defect": "mask-roundtrip-untested",
+      "tool": "mask\\.rs:4 .*replace % with / in apply_mask"
+    },
+    {
+      "defect": "mask-roundtrip-untested",
+      "hand": {
+        "file": "src/frame.rs",
+        "find": "    let mut payload = buf[pos..end].to_vec();\n    if let Some(key) = mask {\n        apply_mask(&mut payload, key);\n    }",
+        "replace": "    let payload = buf[pos..end].to_vec();"
+      }
+    },
+    {
+      "defect": "size-limit-and-truncation-detail",
+      "tool": "frame\\.rs:69 .*replace > with >= in decode"
+    },
+    {
+      "defect": "size-limit-and-truncation-detail",
+      "tool": "frame\\.rs:46 .*replace - with \\+ in decode"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "lang": "ts",
+  "mode": "branch",
+  "args": "main",
+  "commit_message": "feat: add paginate helper",
+  "summary": "New paginate() with three tests that only use an exact multiple of the page size. Invoked with the base ref `main`.",
+  "defects": [
+    {
+      "id": "partial-last-page",
+      "kind": "hand-mutation",
+      "description": "Only 20 items with page size 10 are tested, an exact multiple, so a partial last page is never exercised; `Math.ceil` -> `Math.floor`/`Math.round` survives. A test with e.g. 21 items must expect totalPages 3 and a 1-item last page."
+    },
+    {
+      "id": "clamping-untested",
+      "kind": "tool-survivor",
+      "description": "Out-of-range pages (0, negative, beyond totalPages) and the empty list (totalPages = 1 via Math.max) are never tested, so the clamping in `Math.min(Math.max(1, page), totalPages)` and `Math.max(1, ...)` survives."
+    },
+    {
+      "id": "hasnext-true",
+      "kind": "tool-survivor",
+      "description": "`hasNext` is only ever asserted false; replacing the expression with `false` survives. Page 1 should assert hasNext === true. (The first-page test also checks only the length, not which items.)"
+    }
+  ],
+  "verify": [
+    {
+      "defect": "partial-last-page",
+      "hand": {
+        "file": "src/paginate.ts",
+        "find": "Math.ceil(all.length / pageSize)",
+        "replace": "Math.floor(all.length / pageSize)"
+      }
+    },
+    {
+      "defect": "clamping-untested",
+      "tool": "paginate\\.ts:12 .*Math\\.max\\(Math\\.max\\(1, page\\), totalPages\\)"
+    },
+    {
+      "defect": "hasnext-true",
+      "tool": "paginate\\.ts:18 .*current < totalPages` with `false"
+    }
+  ]
+}

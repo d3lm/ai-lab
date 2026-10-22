@@ -1,0 +1,10 @@
+.claude
+.cursor
+.codex
+
+.ruff_cache
+__pycache__/
+*.pyc
+node_modules/
+target/
+evals/*/runs/
