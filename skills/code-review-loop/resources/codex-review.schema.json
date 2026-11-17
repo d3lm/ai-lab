@@ -1,0 +1,90 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "summary", "findings", "preExisting"],
+  "$defs": {
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Lists the sources that prove the claim. Someone who doubts the claim must be able to open or rerun each one and see the same thing.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "shows", "basis"],
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "Names what to open or rerun, such as a file:line range, a command, a commit, a sentence of the goal, or a documentation URL."
+          },
+          "shows": {
+            "type": "string",
+            "description": "States what the source shows, quoting the code or the output that matters."
+          },
+          "basis": {
+            "type": "string",
+            "enum": ["ran", "read"],
+            "description": "Says whether you ran the command or only read the source."
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["approve", "revise"],
+      "description": "Is approve when no blocker or major finding remains, and revise otherwise."
+    },
+    "summary": { "type": "string", "description": "Summarizes the review in one or two sentences." },
+    "findings": {
+      "type": "array",
+      "description": "Lists proven problems in the change itself. Every finding lies inside the change's scope.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "category", "location", "issue", "evidence", "fix"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Holds a stable id such as F1 or F2. The same issue keeps the same id across turns."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["blocker", "major", "minor"]
+          },
+          "category": {
+            "type": "string",
+            "enum": ["correctness", "quality", "scope", "security", "performance"],
+            "description": "Classifies the finding. A scope finding means the change touches code the goal does not require, and its fix is to revert that code."
+          },
+          "location": {
+            "type": "string",
+            "description": "Names the file path and line range in the working tree, such as src/auth/session.ts:41-58."
+          },
+          "issue": {
+            "type": "string",
+            "description": "States what is wrong, quantified where possible."
+          },
+          "evidence": { "$ref": "#/$defs/evidence" },
+          "fix": {
+            "type": "string",
+            "description": "Describes the minimal change that resolves the finding inside the change's scope."
+          }
+        }
+      }
+    },
+    "preExisting": {
+      "type": "array",
+      "description": "Lists problems noticed in code the change does not touch. They are informational and never become findings.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["location", "issue"],
+        "properties": {
+          "location": { "type": "string", "description": "Names the file path and line range." },
+          "issue": { "type": "string", "description": "States the problem in one sentence." }
+        }
+      }
+    }
+  }
+}

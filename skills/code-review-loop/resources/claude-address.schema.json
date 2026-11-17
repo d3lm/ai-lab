@@ -1,0 +1,67 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "addressed", "rejected"],
+  "$defs": {
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Lists the sources that prove the claim. Someone who doubts the claim must be able to open or rerun each one and see the same thing.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref", "shows", "basis"],
+        "properties": {
+          "ref": {
+            "type": "string",
+            "description": "Names what to open or rerun, such as a file:line range, a command, a commit, a sentence of the goal, or a documentation URL."
+          },
+          "shows": {
+            "type": "string",
+            "description": "States what the source shows, quoting the code or the output that matters."
+          },
+          "basis": {
+            "type": "string",
+            "enum": ["ran", "read"],
+            "description": "Says whether you ran the command or only read the source."
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "summary": { "type": "string", "description": "Summarizes the turn in one or two sentences." },
+    "addressed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "change", "evidence"],
+        "properties": {
+          "id": { "type": "string", "description": "Names the finding id." },
+          "change": {
+            "type": "string",
+            "description": "Describes what changed, naming the files and functions edited."
+          },
+          "evidence": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "reason", "evidence"],
+        "properties": {
+          "id": { "type": "string", "description": "Names the finding id." },
+          "reason": {
+            "type": "string",
+            "description": "Explains why the finding is wrong or outside the goal, answering the reviewer's evidence."
+          },
+          "evidence": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    }
+  }
+}
