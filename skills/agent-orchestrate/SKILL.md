@@ -1,8 +1,9 @@
 ---
 name: agent-orchestrate
-description: Coordinate several Claude Code, Codex CLI, and Cursor CLI (cursor-agent) workers in parallel from the shell, each as a non-interactive process with JSON output, with follow-ups via session resume, progress reads, dependency tracking, and structured results. Use when the user asks to delegate, parallelize, fan out, or split up coding work across claude, codex, or cursor agents, hand work between them, or monitor workers, including "spawn a claude for each of these", "run these through codex in parallel", "give this one to cursor-agent", "what are my workers doing". Not for Superset-managed workspaces and not for a single interactive session.
+description: Coordinate several Claude Code, Codex CLI, and Cursor CLI (cursor-agent) workers in parallel from the shell, each as a non-interactive process with JSON output, with follow-ups via session resume, progress reads, dependency tracking, and structured results. Use when the user asks to delegate, parallelize, fan out, or split up coding work across claude, codex, or cursor agents, hand work between them, or monitor workers, including "spawn a claude for each of these", "run these through codex in parallel", "give this one to cursor-agent", "what are my workers doing".
 argument-hint: the work to split up and which runner (claude, codex, cursor, or mixed)
 allowed-tools: Bash(node:*), Bash(cat:*), Bash(ls:*), Bash(jq:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git worktree list:*)
+disable-model-invocation: true
 ---
 
 # Agent Orchestration
