@@ -207,22 +207,40 @@ The run outcome determines the CLI exit code. `succeeded` exits with 0, `failed`
 
 ## Run directory
 
+Each run gets its own directory under `~/.orchestrator`. Set `ORCHESTRATOR_HOME` or pass `--runs-root` to use another root, which must lie outside `input.root`.
+
 ```text
-~/.orchestrator/<stamp>-<label>-<id>/      (ORCHESTRATOR_HOME or --runs-root to change the root, which must lie outside input.root)
-  manifest.json                            normalized manifest with inlined prompts and schemas, and its hash
-  state.sqlite                             the source of truth (WAL mode), which must never be edited
-  run.md                                   generated report, regenerated with `report`
+~/.orchestrator/<stamp>-<label>-<id>/
+  manifest.json                       Normalized manifest with inlined prompts and schemas, and its hash
+  state.sqlite                        Source of truth in WAL mode, never edited by hand
+  run.md                              Generated report, rebuilt by the report command
   tasks/<task>/attempts/<attempt>/
-    prompt.md  result.schema.json  profile.json  host-config.json
-    launch.json  provider.json  heartbeat.json  events.jsonl
-    stdout.jsonl  stderr.log  final-message.json (codex)  provider-result.json  exit.json  [cancel.json]
-  artifacts/<task>/<attempt>.patch   immutable binary patch of the attempt's own change
-  artifacts/<task>/<attempt>.partial.patch   what the workspace held when a recovery decision was applied
-  artifacts/integration-N.patch      combined change
-  checks/<task>/<attempt>/<name>.log, checks/integration/<name>.log
-  workspaces/<task>/<attempt>/       git worktrees (detached)
-  workspaces/_input[-N]/, .fingerprint   shared read-only checkouts and the fingerprint each started with
-  workspaces/_integration-N/         integration worktrees
+    prompt.md                         Prompt the worker received
+    result.schema.json                Schema the result must match
+    profile.json                      Resolved worker profile
+    host-config.json                  Configuration the attempt host starts from
+    launch.json                       Host process identity, written when the host starts
+    provider.json                     Provider process identity, written when the provider starts
+    heartbeat.json                    Latest host heartbeat
+    events.jsonl                      Normalized provider events
+    stdout.jsonl                      Raw provider stdout
+    stderr.log                        Raw provider stderr
+    final-message.json                Final message (codex only)
+    provider-result.json              Parsed provider result
+    exit.json                         Exit receipt written by the host
+    cancel.json                       Stop request, present only after a cancel or deadline
+  artifacts/
+    <task>/<attempt>.patch            Immutable binary patch of the attempt's own change
+    <task>/<attempt>.partial.patch    Workspace contents when a recovery decision was applied
+    integration-N.patch               Combined change of integration N
+  checks/
+    <task>/<attempt>/<name>.log       Output of one task check
+    integration/<name>.log            Output of one integration check
+  workspaces/
+    <task>/<attempt>/                 Detached git worktree of one attempt
+    _input[-N]/                       Shared read-only checkouts (_input, _input-2, ...)
+    _input[-N].fingerprint            Fingerprint each shared checkout started with
+    _integration-N/                   Worktree of integration N
 ```
 
 Each patch holds only the task's own change relative to its prepared input. Changes inherited from dependencies are not exported again. Before launch, a dependent's input is the base snapshot plus its accepted transitive dependency patches. They are applied in the integration order after their hashes are verified, and committed so that the worker sees a clean `git status`. When patches conflict, the task is blocked before any worker starts.
