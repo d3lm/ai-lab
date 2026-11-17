@@ -1,0 +1,36 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["taskId", "attemptId", "status", "summary", "blocker", "files", "checks"],
+  "properties": {
+    "taskId": { "type": "string", "description": "the task id given in the prompt, copied exactly" },
+    "attemptId": { "type": "string", "description": "the attempt id given in the prompt, copied exactly" },
+    "status": { "type": "string", "enum": ["done", "blocked"] },
+    "summary": { "type": "string", "description": "one-paragraph outcome" },
+    "blocker": {
+      "description": "null unless status is blocked",
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reason", "needs"],
+          "properties": {
+            "reason": { "type": "string", "description": "what stopped the work" },
+            "needs": { "type": "string", "description": "decision, access, or input required to continue" }
+          }
+        }
+      ]
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "paths the worker believes it changed; informational, the host records actual changes"
+    },
+    "checks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "commands the worker ran and their outcome; informational, the host runs its own checks"
+    }
+  }
+}

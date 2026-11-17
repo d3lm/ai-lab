@@ -1,0 +1,20 @@
+{
+  "name": "agent-orchestrate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local supervised runner for Claude Code, Codex CLI, and Cursor CLI workers, with a workflow library for scripts that drive their own turns.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "bin": {
+    "orchestrator": "scripts/orchestrator.mjs"
+  },
+  "exports": {
+    ".": "./scripts/lib/index.mjs"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=4 'tests/**/*.test.mjs'",
+    "test:providers": "ORCHESTRATOR_PROVIDER_TESTS=1 node --test 'tests/providers/*.test.mjs'"
+  }
+}

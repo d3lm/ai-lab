@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://local/agent-orchestrate/run.schema.json",
+  "title": "Orchestrator run manifest, version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "label", "input", "profiles", "tasks"],
+  "properties": {
+    "version": { "const": 1 },
+    "label": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._ -]{0,79}$" },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root"],
+      "properties": {
+        "root": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string", "minLength": 1 },
+        "snapshot": { "enum": ["revision", "working-tree", "none"] }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "concurrency": { "type": "integer", "minimum": 1, "maximum": 16 },
+        "runDeadlineMs": { "type": "integer", "minimum": 1000 },
+        "attemptDeadlineMs": { "type": "integer", "minimum": 1000 },
+        "checkDeadlineMs": { "type": "integer", "minimum": 1000 },
+        "terminateGraceMs": { "type": "integer", "minimum": 100, "maximum": 120000 },
+        "maxStdoutBytes": { "type": "integer", "minimum": 1024, "maximum": 268435456 },
+        "maxStderrBytes": { "type": "integer", "minimum": 1024 },
+        "maxRecordBytes": { "type": "integer", "minimum": 1024 },
+        "maxCheckOutputBytes": { "type": "integer", "minimum": 1024 },
+        "maxArtifactBytes": { "type": "integer", "minimum": 1024 },
+        "spendThresholdUsd": { "type": ["number", "null"], "exclusiveMinimum": 0 }
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "#/definitions/claudeProfile" },
+          { "$ref": "#/definitions/codexProfile" },
+          { "$ref": "#/definitions/cursorProfile" }
+        ]
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": { "$ref": "#/definitions/task" }
+    },
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "order": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+        "checks": { "type": "array", "items": { "$ref": "#/definitions/check" } }
+      }
+    },
+    "checkSandbox": {
+      "description": "How verify and integration checks are confined. They run worker-written code, so the default is an OS sandbox that only allows writes to the check's workspace, the temporary directories, and writableRoots.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "description": "os (sandbox-exec on macOS, bwrap on Linux) or none. Use none only when the whole run executes inside an external sandbox.",
+          "enum": ["os", "none"]
+        },
+        "writableRoots": {
+          "description": "Absolute directories checks may also write to, for example a package manager cache.",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^/" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "executable": {
+      "description": "An argument array for the provider command. Omit it to resolve the executable during preflight.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "claudeProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "model", "permissionMode", "permissionPrompts"],
+      "properties": {
+        "adapter": { "const": "claude-cli" },
+        "executable": { "$ref": "#/definitions/executable" },
+        "model": { "type": "string", "minLength": 1 },
+        "effort": { "enum": ["low", "medium", "high", "xhigh", "max"] },
+        "permissionMode": { "enum": ["default", "acceptEdits", "plan", "bypassPermissions"] },
+        "permissionPrompts": { "const": "none" },
+        "tools": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "allowedTools": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "disallowedTools": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "maxBudgetUsd": { "type": "number", "exclusiveMinimum": 0 },
+        "addDirs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "settingSources": { "type": "array", "items": { "enum": ["user", "project", "local"] } },
+        "strictMcpConfig": { "type": "boolean" },
+        "mcpConfig": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "outputFormat": { "enum": ["stream-json", "json"] },
+        "bashSandbox": {
+          "description": "Runs Claude's Bash tool in Claude Code's sandbox (writes limited to the working directory), fails at startup when the sandbox is unavailable, and disables the unsandboxed retry. Required when a profile that can edit files also auto-approves Bash rules.",
+          "type": "boolean"
+        },
+        "externalSandbox": {
+          "description": "Set only when the whole run executes inside a separately configured sandbox or container.",
+          "type": "boolean"
+        }
+      }
+    },
+    "codexProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "model", "sandbox"],
+      "properties": {
+        "adapter": { "const": "codex-cli" },
+        "executable": { "$ref": "#/definitions/executable" },
+        "model": { "type": "string", "minLength": 1 },
+        "effort": { "enum": ["minimal", "low", "medium", "high", "xhigh", "max"] },
+        "sandbox": { "enum": ["read-only", "workspace-write", "danger-full-access"] },
+        "addDirs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "config": {
+          "description": "Extra -c key=value overrides. Values are TOML literals, for example \"\\\"high\\\"\".",
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z0-9_.-]+$" },
+          "additionalProperties": { "type": "string" }
+        },
+        "externalSandbox": { "type": "boolean" }
+      }
+    },
+    "cursorProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "model", "sandbox"],
+      "properties": {
+        "adapter": { "const": "cursor-cli" },
+        "executable": { "$ref": "#/definitions/executable" },
+        "model": {
+          "description": "A model id from `cursor-agent models`. Effort and other parameters are part of the id.",
+          "type": "string",
+          "minLength": 1
+        },
+        "sandbox": {
+          "description": "Passed as --sandbox. Only enabled is accepted without externalSandbox.",
+          "enum": ["enabled", "disabled"]
+        },
+        "force": {
+          "description": "Passes --force, which auto-approves every tool call and is not contained by the sandbox. Requires externalSandbox.",
+          "type": "boolean"
+        },
+        "addDirs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "externalSandbox": { "type": "boolean" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "argv"],
+      "properties": {
+        "name": { "$ref": "#/definitions/id" },
+        "argv": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "timeoutMs": { "type": "integer", "minimum": 1000 }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "prompt", "profile"],
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "prompt": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["text"],
+              "properties": { "text": { "type": "string", "minLength": 1 } }
+            }
+          ]
+        },
+        "profile": { "$ref": "#/definitions/id" },
+        "dependsOn": { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+        "workspace": { "enum": ["worktree", "shared-readonly", "in-place"] },
+        "session": { "$ref": "#/definitions/id" },
+        "resultSchema": { "type": "string", "minLength": 1 },
+        "scope": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "verify": { "type": "array", "items": { "$ref": "#/definitions/check" } },
+        "requires": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "resume",
+              "streaming-events",
+              "structured-output",
+              "enforced-cost-limit",
+              "sandbox",
+              "tool-policy",
+              "active-turn-steering"
+            ]
+          }
+        },
+        "deadlineMs": { "type": "integer", "minimum": 1000 },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 5 },
+            "on": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "enum": ["transient", "protocol", "verification", "budget"] }
+            },
+            "backoffMs": { "type": "integer", "minimum": 0, "maximum": 600000 },
+            "safeToRepeat": {
+              "description": "Declares that repeating this task's tool use has no unsafe external effect. Required for retries of editing tasks.",
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}

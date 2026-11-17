@@ -1,0 +1,15 @@
+{
+  "name": ".agents",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "lint": "oxlint skills && eslint --cache skills"
+  },
+  "devDependencies": {
+    "@d3lm/lint-preset": "^1.6.7",
+    "eslint": "^10.10.0",
+    "oxlint": "^1.82.0",
+    "oxlint-tsgolint": "^7.0.2001"
+  }
+}

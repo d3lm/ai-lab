@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://local/agent-orchestrate/decision.schema.json",
+  "title": "Orchestrator recovery decisions, version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "decisions"],
+  "properties": {
+    "version": { "const": 1 },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["taskId", "attemptId", "stateVersion", "evidence", "action"],
+        "properties": {
+          "taskId": { "type": "string" },
+          "attemptId": {
+            "description": "The latest attempt of the task, as shown by `status --json`.",
+            "type": "string"
+          },
+          "stateVersion": {
+            "description": "The task's stateVersion when it was inspected. A decision made on an older version is rejected.",
+            "type": "integer"
+          },
+          "evidence": {
+            "description": "What was checked before deciding, in a sentence or more.",
+            "type": "string"
+          },
+          "action": { "enum": ["retry-after-reconciliation", "fail-preserving-artifacts"] }
+        }
+      }
+    }
+  }
+}
