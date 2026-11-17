@@ -219,7 +219,8 @@ def _clip(text: str, limit: int) -> str:
 
 
 def condense_trace(trace: list[dict], budget: int = 300_000) -> str:
-  """Tool calls in full (clipped when huge), tool results head+tail, assistant text in full."""
+  """Renders the trace within `budget` characters, clipping long tool calls and assistant messages and shrinking
+  tool results to their head and tail until the text fits."""
   for result_limit in (6000, 3000, 1500, 600):
     parts = []
 
@@ -299,9 +300,9 @@ def grade(
   trace: list[dict],
   timeout_s: int = 900,
 ) -> dict:
-  """Two independent judge calls: answer-key coverage, and whether claimed verification really ran.
+  """Makes two independent judge calls, one for answer-key coverage and one for whether the claimed verification ran.
 
-  Returns {"verdict", "verification", "cost_usd", "usage", "model"}; raises on judge failure."""
+  Returns {"verdict", "verification", "cost_usd", "usage", "model"} and raises when a judge call fails."""
   defect_ids = [defect["id"] for defect in case["defects"]]
   key_prompt = build_prompt(case, repo, diff, report)
   key_response = _call(key_prompt, SYSTEM, schema(defect_ids), timeout_s)

@@ -1,7 +1,7 @@
 """Copies the train-split material for one round's analyzer into a scratch directory.
 
-The bundle holds only train cases: their results rows (grades, judge explanations, the final report), their
-transcripts, and each train case's score across every round so far. Test-split rows and traces are never copied.
+The bundle holds only train cases. It copies their results rows (grades, judge explanations, the final report),
+their transcripts, and each train case's score across every round so far. Test-split rows and traces are never copied.
 
 Usage: python3 analyzer_bundle.py <variant> <out_dir>
 """

@@ -238,7 +238,7 @@ VERIFY_CREDIT = {"yes": 1.0, "not_claimed": 1.0, "partial": 0.5, "no": 0.0}
 
 
 def verified_share(verification: dict | None) -> float:
-  """Share of suggested tests whose verification claims the transcript backs (1.0 when none suggested)."""
+  """Returns the share of suggested tests whose verification claims the transcript backs, or 1.0 when none are."""
   tests = (verification or {}).get("tests", [])
 
   if not tests:
@@ -543,7 +543,7 @@ def export(variant: str) -> None:
 
 
 def regrade(variant: str, cases: list[str] | None, jobs: int) -> None:
-  """Re-runs only the judge on stored reports and transcripts; keeps tree_clean from the original run."""
+  """Re-runs only the judge on stored reports and transcripts and keeps tree_clean from the original run."""
   vdir = RUNS_DIR / variant
   path = vdir / "results.jsonl"
   rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]

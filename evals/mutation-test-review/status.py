@@ -1,4 +1,5 @@
-"""Prints the hillclimb status table from results/scores.csv: per variant, train/test means and the paired delta vs baseline.
+"""Prints the hillclimb status table from results/scores.csv with each variant's train and test means and its paired
+delta against the baseline.
 
 Usage: python3 status.py [--md]   (--md also rewrites the table at the top of runs/narrative.md)
 """

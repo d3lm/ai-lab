@@ -87,7 +87,7 @@ def mutate(repo: Path, lang: str, work: Path, in_place: bool = False) -> dict:
 
 
 def apply_hand(repo: Path, edits: dict | list[dict]) -> dict[str, str]:
-  """Applies one or more find/replace edits; returns the original file texts."""
+  """Applies one or more find/replace edits and returns the original file texts."""
   originals: dict[str, str] = {}
 
   for edit in edits if isinstance(edits, list) else [edits]:
@@ -164,7 +164,6 @@ def verify_case(case_id: str, explore: bool) -> dict:
         for file, text in originals.items():
           (repo / file).write_text(text)
     elif "baseline" in check:
-      # the plain test command (or check["cmd"]) must report this many tests / succeed
       test_run = run_tests(repo, lang, None, check.get("cmd"))
       output = test_run.stdout + test_run.stderr
       entry["pass"] = test_run.returncode == 0 and re.search(check["baseline"], output) is not None

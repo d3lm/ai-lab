@@ -1,4 +1,4 @@
-"""Renders CASES.md: every case, its answer key, and the diff under review."""
+"""Renders CASES.md with every case, its answer key, and the diff under review."""
 
 import subprocess
 import tempfile

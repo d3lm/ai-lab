@@ -145,7 +145,7 @@ def build(
 
 
 def snapshot(repo: Path) -> dict:
-  """State of the repo that the skill must leave unchanged."""
+  """Returns the state of the repo that the skill must leave unchanged."""
 
   def run(*args: str) -> str:
     return subprocess.run(["git", *args], cwd=repo, check=False, capture_output=True, text=True).stdout
