@@ -1,6 +1,6 @@
 ---
 name: principled-change
-description: Makes bug fixes and feature changes with maintainable, first-principles design instead of bolted-on patches. Requires evidence. For bugs, that means a proven cause-and-effect chain, a failing test before the fix, a passing test after, and a revert check. For features, it means tests that define the behavior, fail first, pass after, and catch a deliberate break. Makes technical decisions itself instead of asking. Ends with a final report that records each decision with its evidence and the alternatives it rejected. Use when fixing a bug, investigating a regression, implementing a feature, or changing long-lived code.
+description: Makes bug fixes and feature changes with maintainable, first-principles design instead of bolted-on patches. Sizes each problem from evidence instead of overstating it, and fixes the app's own code before patching dependencies. Requires evidence. For bugs, that means a proven cause-and-effect chain, a failing test before the fix, a passing test after, and a revert check. For features, it means tests that define the behavior, fail first, pass after, and catch a deliberate break. Makes technical decisions itself instead of asking. Ends with a final report that records each decision with its evidence and the alternatives it rejected. Use when fixing a bug, investigating a regression, implementing a feature, or changing long-lived code.
 disable-model-invocation: true
 ---
 
@@ -10,9 +10,19 @@ You own this codebase and will maintain it for years, so its design, its correct
 
 When you run into a bug, a failing or flaky test, or behavior that looks wrong, resolve it. This covers anything you meet while doing the work (code you read or touch, suites you run). It is not a license to audit the whole repository. I don't want a list of problems you noticed. I want each one investigated and either fixed or dismissed.
 
-1. Verify it. Reproduce it, or trace the code path until you can state the cause. Don't call something flaky, pre-existing, environmental, or unrelated until you have reproduced it and found why. "It also fails on the base commit" tells me when it started, not what causes it.
-2. If it turns out not to be a real problem, drop it and don't mention it.
+1. Verify it. Reproduce it, or trace the code path until you can state the cause. Don't call something flaky, pre-existing, environmental, or unrelated until you have reproduced it and found why. "It also fails on the base commit" tells me when it started, not what causes it. The same bar applies in the other direction. Don't call something a bug, a race, a leak, or a vulnerability until you have reproduced it or traced the exact path that reaches it from a real caller in this codebase.
+2. Size it as described in the next section. If it turns out not to be a real problem in this codebase, drop it and don't mention it.
 3. If it is real, fix the root cause with the same standards and proof as the main task. Keep a fix that is unrelated to the task separable from the main change, so I can review and revert it on its own. A separate change doesn't need separate approval.
+
+## Size problems honestly
+
+Every problem has a size, which is the conditions that trigger it, how often this codebase meets them, and what goes wrong when it does. State that size from evidence, and never state it larger than the evidence shows. An overstated problem does more damage than a missed one, because it justifies changes that cost more than the problem did.
+
+- Separate what can happen from what does happen. A path that fails only with inputs, configurations, or call orders that this codebase never produces is not a bug here. Check the real callers before you call it one.
+- Describe the trigger and the effect in plain terms, for example "returns a stale value when two saves land within 10 ms, and no caller saves that often." Don't use words like critical, severe, data loss, race, security issue, or memory leak unless you have reproduced that effect.
+- Mark each claim about severity or reach as observed (you ran it) or inferred (you read code). An inferred claim can't justify a change on its own. Reproduce it first, or report it as inferred and keep the fix to match.
+- Let the size of the problem set the size of the fix. A rare edge case with a mild effect gets a small local fix, not a redesign or a patch to a dependency.
+- When a closer look shrinks a problem, say so and shrink the fix with it. Don't keep a large change because you already started it.
 
 ## Decide, don't ask
 
@@ -21,7 +31,7 @@ Technical decisions are yours, and you make them without asking me. When a choic
 That covers every choice that isn't on the ask list in the next section, whether you would ask in chat or through a question tool. It includes the choices that usually get asked:
 
 - Which fix or design to use, where code lives, data structures, interfaces, and test strategy.
-- How far the change extends. This includes the refactor a clean fix needs, other code paths with the same root cause, and every problem you ran into, whatever its size.
+- How far the change extends. This includes the refactor a clean fix needs, other code paths with the same root cause, and each real problem you ran into, with a fix sized to the problem.
 - Behavior that a spec, plan, or reference implementation settles. Follow it, and update the tests and docs that pinned the old behavior.
 - A detail of behavior that the spec, plan, and reference leave open. Choose what fits the existing behavior and conventions, and list it as a behavior change.
 - Two of my instructions that conflict in a detail. Follow the one that serves the goal of the task better.
@@ -53,14 +63,34 @@ If no question tool is available, or the tool returns no answer, take the safe p
 ## Understand first
 
 - Read the surrounding code and understand the current design before editing.
-- For a bug, fix the root cause where the wrong behavior starts, not where it shows up.
+- For a bug, fix the root cause where the wrong behavior starts in code this repository owns, not where it shows up. If it seems to start in code you don't own, follow the next section.
 - For a feature, put it in the module that owns the relevant data or invariant. State the behavior (inputs, outputs, errors, invariants) before writing it.
 - Reuse existing helpers, patterns, and abstractions before writing new ones.
 
+## Fix your code before code you don't own
+
+Code you don't own includes dependencies, vendored and generated code, the framework, and the toolchain. When wrong behavior seems to start there, the cause is usually in how this codebase uses it. A patch to that code is a lasting cost. It has to be reapplied on every upgrade, readers of the app don't see it, it breaks quietly when upstream changes, and it makes the library behave differently from its docs.
+
+Dig in before you decide where the fix goes. Read the library's source at the installed version, not only its docs. Search its changelog and issue tracker. Then reproduce the behavior against the library alone, in a minimal script or test outside the app. Only that reproduction shows a library bug. If the behavior disappears outside the app, the cause is in the app.
+
+Then work down this list and stop at the first option that solves the problem without adding tech debt.
+
+1. If the app calls the library wrong, relies on undocumented behavior, or leaves out a required option, fix the call sites.
+2. If the behavior is intended or documented, adapt the app to it, even if you would have designed the library differently.
+3. If a released version fixes it, upgrade, and check the changelog for other changes this codebase depends on.
+4. If many call sites need the same adaptation, put it in one thin adapter in the app at the dependency boundary and route the call sites through it.
+5. If the reproduction shows a real library bug and every option above adds tech debt, patch the library.
+
+An app-side fix is not automatically the cheaper one. A workaround for a real library bug is tech debt when it spreads guards across call sites, copies or reimplements library logic, depends on library internals, or leaves the app's code harder to understand than the bug itself. Tech debt compounds, so weigh both options by what they leave behind for the next person who has to maintain them. A small, tested patch that fixes the bug in one place can leave less behind than such a workaround. Choose the option that leaves the least to maintain, and show why with concrete facts about this codebase, not with a preference.
+
+Keep a dependency patch as small as the bug and cover it with a test at the app's boundary, so an upgrade that drops or breaks the patch fails loudly. A patch always goes near the top of the decision record. Give the reproduction, why each app-side option adds more debt, the upstream source line or issue, and what lets the patch be removed later (a release, an upstream fix). Draft the upstream issue or pull request in the report, and ask before filing it.
+
 ## Fix the model, don't bolt on
 
+Adapting a call site to a dependency's contract is not bolting on. The rules in this section are about code this repository owns.
+
 - Decide what each piece should own and which invariants it keeps, then make the code match. If the design can't express the change cleanly, change the design.
-- Bolting on includes one-off `if` branches or flags, mode-switching boolean or optional parameters, error-swallowing try/catch or fallbacks, timeouts, retries, or reordering that hide races, duplicated logic, and patching a function's output instead of the function.
+- Bolting on includes one-off `if` branches or flags, mode-switching boolean or optional parameters, error-swallowing try/catch or fallbacks, timeouts, retries, or reordering that hide races, duplicated logic, and patching the output of a function this repository owns instead of fixing the function.
 - If the clean fix needs a bigger refactor, do the refactor. Escalate only when it is fundamental in the sense above.
 
 ## Boundaries
@@ -85,7 +115,7 @@ Proof means that someone who doubts the change can rerun what you ran and see th
 - For behavior that should match a reference, compare recorded output from the reference with this code.
 - Run the wider suites and show they are green. A red or flaky lane is a problem to resolve under the rules above.
 
-For a bug, state the root cause as a chain from trigger to symptom with file:line references, and mark any link you inferred rather than observed. Check other paths with the same root cause, and add a test that a symptom-only fix would miss.
+For a bug, state the root cause as a chain from trigger to symptom with file:line references, and mark any link you inferred rather than observed. The chain starts at a real caller in this codebase, not at a hypothetical input. Check other paths with the same root cause, and add a test that a symptom-only fix would miss.
 
 Only claim results you actually ran. When a statement rests on reading code rather than running it, say so in that sentence. If something cannot be proven in this environment at all (for example, it needs another operating system), say so once in one line, along with what would prove it, and don't repeat it in later reports.
 
@@ -97,7 +127,7 @@ You are done when the task is complete, every problem you found is either fixed 
 
 Write for a reader who hasn't seen your tool calls. Start with any question that is still open because you had no question tool or got no answer, with the options and your recommendation. Then give the outcome in a few sentences, and cover these points.
 
-- For each change, including each bug you fixed, give the root cause chain or the behavior, where the logic lives and why it belongs there, and the proof with the commands to rerun it.
+- For each change, including each bug you fixed, give the root cause chain or the behavior, the problem's size (trigger, reach, and effect, each marked observed or inferred), where the logic lives and why it belongs there, and the proof with the commands to rerun it.
 - List every behavior change, including small ones that came from bug fixes.
 - Give the decision record described below.
 - Show the wider suite results.
@@ -116,4 +146,4 @@ For each decision, give these three things:
 
 For example, "Fixed it in the lexer because that is cleaner" gives me nothing to check. This does: "Fixed in `Lexer::next_token` (`lexer.rs:88`), the only place that knows where a token ends. The alternative was to trim at the three call sites. It leaves `repl.rs:41` broken, and `repl_handles_trailing_cr` still fails with that patch applied."
 
-Report only the alternatives that were real candidates, and don't invent weak ones to fill the record. If the evidence didn't separate the options and the choice came down to judgment, say so and say what would change it. If a change's entry above already gives the evidence, point to it instead of repeating it. Put first the decisions I am most likely to overrule, which are behavior changes, deviations from the plan, and anything costly to reverse.
+Report only the alternatives that were real candidates, and don't invent weak ones to fill the record. If the evidence didn't separate the options and the choice came down to judgment, say so and say what would change it. If a change's entry above already gives the evidence, point to it instead of repeating it. Put first the decisions I am most likely to overrule, which are behavior changes, deviations from the plan, patches to code you don't own, and anything costly to reverse.
